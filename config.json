@@ -1,0 +1,33 @@
+{
+    "init": [{    
+    "endpoint": "https://tx.dev.hl7.org.au/fhir"
+    }],
+    
+    "codesystem-excluded": [
+        { 
+          "uri": "urn:oid:1.2.36.1.2001.1005.17" ,
+          "result": "MANUAL",
+          "reason": "Known issue with example: OID is an identifier, not a CodeSystem URI"
+        },
+        { 
+          "uri": "http://www.mims.com.au/codes",
+          "result": "MANUAL",
+          "reason": "Manual validation required: MIMS is a proprietary code system, not published as a FHIR resource as yet"
+        },
+        { 
+          "uri": "http://www.whocc.no/atc",
+          "result": "MANUAL",
+          "reason": "Manual validation required: WHO ATC classification system is not published as a FHIR resource as yet"
+        },
+        { 
+          "uri": "http://example.acme.com.au/generic-packages",
+          "result": "IGNORED",
+          "reason": "Codes from 'example' code systems can not be validated, they are essentially local codes"
+        },
+        {
+            "uri": "http://pbs.gov.au/code/item",
+            "result": "MANUAL",
+            "reason": "Manual validation required: PBS licensing prevents publishing of this code system as a FHIR resource."
+        }
+    ]
+}
