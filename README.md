@@ -35,4 +35,4 @@ The purpose of this script is to generate a Terminology Validation report about 
 ### Output
    * Output is ...
       * an html file in the report output directory called `TestDataValidationReport.html`
-      * an xlsx file in the report output directory called `TestDataValidationReport-{ts}.xlsx`
+      * an xlsx file in the report output directory called `TestDataValidationReport-{ts}.xlsx`, where `ts` is the current date and time. 
