@@ -37,9 +37,15 @@ class TestValueSetTester(unittest.TestCase):
         example_list = get_json_files(self.example_dir)
         all_results = []
         for ex in example_list:
-            results = search_json_file(self.endpoint, cs_excluded, ex)
+            results = search_json_file(self.endpoint, cs_excluded, ex, all_results=all_results)
             all_results.extend(results)
-        header = ['file','resourceType','element','code','display','text','system','result','reason']
+
+        header = ['file','resourceid','code','display','system','text','result','reason']
+
+        for result in all_results:
+            for key in header:
+                if key not in result:
+                    result[key] = ''  # Provide a default value
         df_results = pd.DataFrame(all_results,columns=header)
         self.assertFalse((df_results['result']=='FAIL').any())
         
@@ -50,13 +56,13 @@ class TestValueSetTester(unittest.TestCase):
             Tests both the request status and the response for the validation
         """       
         tests = [
-            {'file': 'file1.json', 'system': 'http://snomed.info/sct', 'code': '79115011000036100', 'status_code': 200, 'result': 'PASS'}, 
-            {'file': 'file1.json', 'system': 'http://loinc.org', 'code': '16935-9' , 'status_code': 200, 'result': 'PASS'},
-            {'file': 'file2.json', 'system': 'http://loinc.org', 'code': '6935-9' , 'status_code': 200, 'result': 'FAIL' }
+            {'file': 'file1.json', 'id': 'res1', 'system': 'http://snomed.info/sct', 'code': '79115011000036100', 'text': 'Panadol + Codeine 500mg', 'status_code': 200, 'result': 'PASS'}, 
+            {'file': 'file1.json', 'id': 'res2', 'system': 'http://loinc.org', 'code': '16935-9' , 'text': 'Hepatitis B S. Ab', 'status_code': 200, 'result': 'PASS'},
+            {'file': 'file2.json', 'id': 'res3', 'system': 'http://loinc.org', 'code': '6935-9' , 'text': 'HIV 2 PCR', 'status_code': 200, 'result': 'FAIL' }
         ]
         cs_excluded = get_config(self.test_config_default,'codesystem-excluded')        
         for test in tests: 
-            result_status = validate_example_code(self.endpoint,cs_excluded,test['file'],test['system'],test['code'])
+            result_status = validate_example_code(test['file'],self.endpoint,cs_excluded,test['system'],test['code'],'',test['text'],'MedicationStatement','')
             self.assertEqual(test['status_code'], result_status['status_code'])
             self.assertEqual(test['result'], result_status['result'])
 
