@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 from datetime import datetime
 from os.path import isfile
@@ -29,10 +30,12 @@ def get_all_files(root, exclude=SKIP_DIRS):
         if item.is_dir():
             yield from get_all_files(item)
 
-##
-## get_json_files: find all json files 
-##
+
 def get_json_files(root,filter=None):
+    """
+    find all json files 
+    """
+    
     if filter == None:
         pattern = "%s/*.json" % (root)
     else:
@@ -41,9 +44,7 @@ def get_json_files(root,filter=None):
         if isfile(item):
             yield item
 
-##
-## 
-##
+
 def _extract_and_validate_elements(element, file_path, endpoint, cs_excluded, resource_id, current_path, current_file_results, parent_is_codeable_concept=False, cc_text=None):
     """
     Recursively extracts and validates coded elements from a FHIR resource fragment.
@@ -51,18 +52,57 @@ def _extract_and_validate_elements(element, file_path, endpoint, cs_excluded, re
     if isinstance(element, dict):
         system = element.get('system')
         code = element.get('code')
-        is_coding = bool(system and code) # It's a Coding element if it has system and code
-
+        display = element.get('display')
+        # Check if the current path suggests this is a coding element
+        is_coding = current_path and re.search(r'coding\[\d+\]$', current_path.lower())
+        
         # Check for Coding element
         if is_coding:
-            display = element.get('display')
             # Use cc_text passed down if the parent was a CodeableConcept
             context_text = cc_text if parent_is_codeable_concept else None
             # Validate and get the result dictionary
             test_result = validate_example_code(file_path, endpoint, cs_excluded, system, code, display, context_text, resource_id, current_path)
             # Append the single result dictionary to the list
-            current_file_results.append(test_result) # CORRECTED: use append for dict
-
+            current_file_results.append(test_result)
+            if display and not system and not code:
+                current_file_results.append({
+                    'file': split_node_path(file_path),
+                    'resource_id': resource_id,
+                    'path': current_path,
+                    'code': None,
+                    'display_provided': display,
+                    'text_context': cc_text,
+                    'system': None,
+                    'result': 'ERROR',
+                    'reason': 'Display provided but code and system are missing.',
+                    'status_code': None
+                })           
+            elif display and not system:
+                current_file_results.append({
+                    'file': split_node_path(file_path),
+                    'resource_id': resource_id,
+                    'path': current_path,
+                    'code': None,
+                    'display_provided': display,
+                    'text_context': cc_text,
+                    'system': None,
+                    'result': 'ERROR',
+                    'reason': 'Display provided but system is missing.',
+                    'status_code': None
+                })  
+            elif display and not code:
+                current_file_results.append({
+                    'file': split_node_path(file_path),
+                    'resource_id': resource_id,
+                    'path': current_path,
+                    'code': None,
+                    'display_provided': display,
+                    'text_context': cc_text,
+                    'system': None,
+                    'result': 'ERROR',
+                    'reason': 'Display provided but code is missing.',
+                    'status_code': None
+                })  
         # Check for CodeableConcept structure AFTER checking for Coding
         # A CodeableConcept might contain other nested elements to recurse into.
         is_codeable_concept = 'coding' in element and isinstance(element['coding'], list)
@@ -183,7 +223,14 @@ def validate_example_code(file_path, endpoint, cs_excluded, system, code, displa
             logger.debug(f"Code system '{system}' excluded for code '{code}' in {base_file_name} at {current_path}.")
             return test_result # Stop validation if excluded
 
-    # 2. Prepare and send request
+    # 2. Check for missing code when display is provided
+    if display_provided and not code:
+        test_result['result'] = 'ERROR'
+        test_result['reason'] = "Display provided but code is missing."
+        logger.error(f"Display provided but code is missing in {base_file_name} at {current_path}.")
+        return test_result
+    
+    # 3. Prepare and send request
     if not endpoint.endswith('/'):
         endpoint += '/'
     # Use parameters for requests library to handle encoding
