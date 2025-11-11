@@ -33,14 +33,14 @@ def get_all_files(root, exclude=SKIP_DIRS):
 
 def get_json_files(root,filter=None):
     """
-    find all json files 
+    Recursively find all json files in the directory and subdirectories
     """
     
     if filter == None:
-        pattern = "%s/*.json" % (root)
+        pattern = os.path.join(root, "**", "*.json")
     else:
-        pattern = "%s/%s*.json" % (root,filter)
-    for item in glob.glob(pattern):
+        pattern = os.path.join(root, "**", f"{filter}*.json")
+    for item in glob.glob(pattern, recursive=True):
         if isfile(item):
             yield item
 
@@ -323,8 +323,11 @@ def run_capability_test(endpoint):
     if response.status_code == 200:
         data = response.json()
         server_type = evaluate(data, "instantiates[0]")
-        fhirVersion = evaluate(data, "fhirVersion")
-        if server_type[0] == "http://hl7.org/fhir/CapabilityStatement/terminology-server" and fhirVersion[0] == "4.0.1":
+        fhir_version = evaluate(data, "fhirVersion")
+        if (isinstance(server_type, list) and len(server_type) > 0 and 
+            server_type[0] == "http://hl7.org/fhir/CapabilityStatement/terminology-server" and 
+            isinstance(fhir_version, list) and len(fhir_version) > 0 and 
+            fhir_version[0] == "4.0.1"):
             return 200  # OK
         else:
             return 418  # I'm a teapot (have we upgraded to a new version??)
@@ -437,7 +440,7 @@ def run_terminology_check(endpoint, testconf, jdir, outdir):
     worksheet = writer.sheets['Terminology Checks']
     
     # Add column formatting
-    code_format = workbook.add_format({'num_format': '@'})  # Text format for codes
+    code_format = workbook.add_format({'num_format': '@'})  # type: ignore  # Text format for codes
     worksheet.set_column('D:D', 20, code_format)  # Apply to code column
     worksheet.set_column('A:I', 20)  # Set width for all columns
 
@@ -448,11 +451,11 @@ def run_terminology_check(endpoint, testconf, jdir, outdir):
     worksheet.conditional_format(f'G2:G{last_row}', {'type': 'cell',
                                        'criteria': '==',
                                        'value': '"PASS"',
-                                       'format': workbook.add_format({'bg_color': '#C6EFCE'})})
+                                       'format': workbook.add_format({'bg_color': '#C6EFCE'})})  # type: ignore
     worksheet.conditional_format(f'G2:G{last_row}', {'type': 'cell',
                                        'criteria': '==',
                                        'value': '"FAIL"',
-                                       'format': workbook.add_format({'bg_color': '#FFC7CE'})})
+                                       'format': workbook.add_format({'bg_color': '#FFC7CE'})})  # type: ignore
     
     writer.close()
     

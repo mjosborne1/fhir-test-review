@@ -37,7 +37,7 @@ class TestValueSetTester(unittest.TestCase):
         example_list = get_json_files(self.example_dir)
         all_results = []
         for ex in example_list:
-            results = search_json_file(self.endpoint, cs_excluded, ex, all_results=all_results)
+            results = search_json_file(self.endpoint, cs_excluded, ex)
             all_results.extend(results)
 
         header = ['file','resourceid','code','display','system','text','result','reason']
@@ -49,6 +49,21 @@ class TestValueSetTester(unittest.TestCase):
         df_results = pd.DataFrame(all_results,columns=header)
         self.assertFalse((df_results['result']=='FAIL').any())
         
+
+    def test_get_json_files_recursive(self):
+        """
+            Test that get_json_files can find JSON files in subdirectories recursively
+        """
+        # Get all JSON files from the example directory
+        json_files = list(get_json_files(self.example_dir))
+        
+        # Verify that files were found
+        self.assertGreater(len(json_files), 0, "Should find at least one JSON file")
+        
+        # Verify all returned items are JSON files
+        for file_path in json_files:
+            self.assertTrue(file_path.endswith('.json'), f"File {file_path} should have .json extension")
+            self.assertTrue(os.path.isfile(file_path), f"Path {file_path} should be a file")
 
     def test_validate_code(self):
         """
